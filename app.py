@@ -5,52 +5,70 @@ from io import BytesIO
 st.set_page_config(page_title="Sales Forecast Input Tool", layout="wide")
 st.title("📈 Sales Forecast Input Tool")
 
+# ----------- CACHED FUNCTIONS -----------
+
+@st.cache_data
+def load_excel(file):
+    return pd.read_excel(file, engine="openpyxl")
+
+@st.cache_data
+def get_unique_options(df, column):
+    return sorted(df[column].dropna().unique())
+
+# ----------- APP LOGIC -----------
+
 # Step 1: Upload Excel file
 uploaded_file = st.file_uploader("Upload your Excel forecast file", type=["xlsx"])
 
 if uploaded_file:
-    df = pd.read_excel(uploaded_file, engine="openpyxl")
+    with st.spinner("Loading forecast data..."):
+        df = load_excel(uploaded_file)
 
     # Step 2: Filter by Grouped Customer Owner (Sales Rep)
-    rep_name = st.selectbox("Select your name (Grouped Customer Owner)", df["Grouped Customer Owner"].dropna().unique())
-    df_filtered = df[df["Grouped Customer Owner"] == rep_name]
+    rep_name = st.selectbox(
+        "Select your name (Grouped Customer Owner)", 
+        get_unique_options(df, "Grouped Customer Owner")
+    )
 
     # Step 3: Additional Filters
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        customer = st.selectbox("Grouped Customer", ["All"] + sorted(df_filtered["Grouped Customer"].dropna().unique()))
+        customer = st.selectbox("Grouped Customer", ["All"] + get_unique_options(df, "Grouped Customer"))
     with col2:
-        coverage = st.selectbox("Coverage", ["All"] + sorted(df_filtered["Coverage"].dropna().unique()))
+        coverage = st.selectbox("Coverage", ["All"] + get_unique_options(df, "Coverage"))
     with col3:
-        sku = st.selectbox("SKU", ["All"] + sorted(df_filtered["SKU"].dropna().unique()))
+        sku = st.selectbox("SKU", ["All"] + get_unique_options(df, "SKU"))
 
-    # Apply filters
+    # Apply all filters in one go
+    mask = df["Grouped Customer Owner"] == rep_name
     if customer != "All":
-        df_filtered = df_filtered[df_filtered["Grouped Customer"] == customer]
+        mask &= df["Grouped Customer"] == customer
     if coverage != "All":
-        df_filtered = df_filtered[df_filtered["Coverage"] == coverage]
+        mask &= df["Coverage"] == coverage
     if sku != "All":
-        df_filtered = df_filtered[df_filtered["SKU"] == sku]
+        mask &= df["SKU"] == sku
+
+    df_filtered = df[mask]
 
     # Step 4: Editable June forecast column inside a form
     st.subheader("✏️ Edit June Forecast")
+
     with st.form("forecast_form"):
         editable_df = st.data_editor(
             df_filtered[["Grouped Customer", "Coverage", "SKU", "Jun"]],
             num_rows="dynamic",
             use_container_width=True
         )
-        
         submitted = st.form_submit_button("✅ Submit Forecast")
 
-    # Step 5: Process after submission
+    # Step 5: Submit logic
     if submitted:
         st.success("Forecast submitted!")
 
-        # Replace June values in original df with edited values
+        # Update main dataframe
         updated_df = df.copy()
-        for i, row in editable_df.iterrows():
+        for _, row in editable_df.iterrows():
             mask = (
                 (updated_df["Grouped Customer Owner"] == rep_name) &
                 (updated_df["Grouped Customer"] == row["Grouped Customer"]) &
@@ -59,7 +77,7 @@ if uploaded_file:
             )
             updated_df.loc[mask, "Jun"] = row["Jun"]
 
-        # Provide download link
+        # Download updated file
         buffer = BytesIO()
         updated_df.to_excel(buffer, index=False, engine="openpyxl")
         buffer.seek(0)
