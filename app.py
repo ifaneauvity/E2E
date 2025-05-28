@@ -105,20 +105,10 @@ st.header("📝 Edit June Forecast")
 # Only show relevant columns
 display_df = df_filtered[["Grouped Customer", "SKU Name", "RF10", "May", "Jun"]].copy()
 
-# Clean 'Jun': convert '-', blanks to 0 and ensure numeric
-display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0)
+# Clean 'Jun' column: convert '-' or blanks to 0, and force numeric
+display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
 
-# Append total row
-total_row = {
-    "Grouped Customer": "",
-    "SKU Name": "🧮 Total",
-    "RF10": None,
-    "May": None,
-    "Jun": display_df["Jun"].sum()
-}
-display_df = pd.concat([display_df, pd.DataFrame([total_row])], ignore_index=True)
-
-# Editable table (only Jun is editable, last row is still editable for now)
+# Live editable data table (outside form)
 editable_df = st.data_editor(
     display_df,
     column_config={
@@ -137,7 +127,7 @@ editable_df = st.data_editor(
     key="editable_forecast"
 )
 
-# Live total forecast
+# Live total forecast (below the table)
 total_forecast = editable_df["Jun"].sum()
 st.markdown(
     f"""
@@ -147,6 +137,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 # Form only for submit button
 with st.form("forecast_form"):
