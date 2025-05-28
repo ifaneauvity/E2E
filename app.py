@@ -45,12 +45,10 @@ def load_forecast_from_databricks():
         http_path=st.secrets["databricks_path"],
         access_token=st.secrets["databricks_token"]
     )
-
     query = f"""
         SELECT * 
         FROM {st.secrets["databricks_catalog"]}.{st.secrets["databricks_schema"]}.{st.secrets["databricks_table"]}
     """
-
     df = pd.read_sql(query, connection)
     connection.close()
     return df
@@ -94,36 +92,30 @@ st.header("📝 Edit June Forecast")
 
 # ----------- DATA PROCESSING -----------
 
-# Define monthly columns
 monthly_cols = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"]
 
-# Ensure all needed columns exist and are numeric
+# Ensure all required columns exist and are numeric
 for col in monthly_cols + ["Jun", "RF10"]:
-    if col in df_filtered.columns:
-        df_filtered[col] = pd.to_numeric(df_filtered[col], errors="coerce").fillna(0)
-    else:
+    if col not in df_filtered.columns:
         df_filtered[col] = 0
+    df_filtered[col] = pd.to_numeric(df_filtered[col], errors="coerce").fillna(0)
 
-# Create calculated columns
-df_filtered["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + df_filtered["Jun"]
-df_filtered["Forecast Gap"] = df_filtered["RF10"] - df_filtered["Actual + Forecast"]
-
-# Reorder and clean up display columns
-display_df = df_filtered[[
-    "Grouped Customer", "SKU Name", "May", "Jun",
-    "Actual + Forecast", "RF10", "Forecast Gap"
+# Select key columns
+base_df = df_filtered[[
+    "Grouped Customer", "SKU Name", "May", "Jun", "RF10"
 ]].copy()
 
-# ----------- EDITABLE DATA TABLE -----------
+# Clean Jun
+base_df["Jun"] = pd.to_numeric(base_df["Jun"], errors="coerce").fillna(0)
+
+# Editable table
 editable_df = st.data_editor(
-    display_df,
+    base_df,
     column_config={
         "Grouped Customer": st.column_config.TextColumn(disabled=True),
         "SKU Name": st.column_config.TextColumn(disabled=True),
         "May": st.column_config.NumberColumn(disabled=True),
         "RF10": st.column_config.NumberColumn(disabled=True),
-        "Actual + Forecast": st.column_config.NumberColumn(disabled=True),
-        "Forecast Gap": st.column_config.NumberColumn(disabled=True),
         "Jun": st.column_config.NumberColumn(
             label="✏️ June Forecast (Editable)",
             help="Enter forecast values for June",
@@ -135,7 +127,43 @@ editable_df = st.data_editor(
     key="editable_forecast"
 )
 
-# ----------- TOTAL FORECAST DISPLAY -----------
+# ----------- DYNAMIC CALCULATIONS (AFTER INPUT) -----------
+# Update 'Jun' in full dataset
+df_filtered["Jun"] = editable_df["Jun"]
+
+# Recalculate metrics
+df_filtered["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + df_filtered["Jun"]
+df_filtered["Forecast Gap"] = df_filtered["RF10"] - df_filtered["Actual + Forecast"]
+
+# Build final display with correct column order
+final_df = pd.concat([
+    df_filtered[["Grouped Customer", "SKU Name", "May"]],
+    editable_df["Jun"],
+    df_filtered[["Actual + Forecast", "RF10", "Forecast Gap"]]
+], axis=1)
+
+# Re-render full table
+st.data_editor(
+    final_df,
+    column_config={
+        "Grouped Customer": st.column_config.TextColumn(disabled=True),
+        "SKU Name": st.column_config.TextColumn(disabled=True),
+        "May": st.column_config.NumberColumn(disabled=True),
+        "Jun": st.column_config.NumberColumn(
+            label="✏️ June Forecast (Editable)",
+            help="Enter forecast values for June",
+            format="%d",
+            disabled=False
+        ),
+        "Actual + Forecast": st.column_config.NumberColumn(disabled=True),
+        "RF10": st.column_config.NumberColumn(disabled=True),
+        "Forecast Gap": st.column_config.NumberColumn(disabled=True),
+    },
+    use_container_width=True,
+    key="final_forecast"
+)
+
+# ----------- LIVE TOTAL FORECAST -----------
 total_forecast = editable_df["Jun"].sum()
 st.markdown(
     f"""
@@ -153,6 +181,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ----------- SUBMIT BUTTON -----------
+# ----------- SUBMIT -----------
 with st.form("forecast_form"):
     submitted = st.form_submit_button("✅ Submit Forecast")
