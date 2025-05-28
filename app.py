@@ -54,6 +54,7 @@ def load_forecast_from_databricks():
     return df
 
 @st.cache_data
+
 def get_unique_options(df, column):
     return sorted(df[column].dropna().unique())
 
@@ -61,10 +62,11 @@ def get_unique_options(df, column):
 with st.spinner("Connecting to Databricks and loading data..."):
     df = load_forecast_from_databricks()
 
+# Strip columns
 df.columns = df.columns.str.strip()
 
 # ----------- FILTERS -----------
-st.header("🧭 Filter Your Data")
+st.header("🧱 Filter Your Data")
 
 rep_name = st.selectbox(
     "Select your name (Grouped Customer Owner)",
@@ -88,27 +90,23 @@ if sku_name != "All":
 df_filtered = df[mask]
 
 st.markdown("---")
-st.header("📝 Edit June Forecast")
+st.header("🖍️ Edit June Forecast")
 
-# ----------- CLEAN DATA -----------
+# ----------- PREPARE COLUMNS -----------
 monthly_cols = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"]
+
 for col in monthly_cols + ["Jun", "RF10"]:
     if col not in df_filtered.columns:
         df_filtered[col] = 0
     df_filtered[col] = pd.to_numeric(df_filtered[col], errors="coerce").fillna(0)
 
-# Prepare base table
-base_df = df_filtered[["Grouped Customer", "SKU Name", "May", "Jun", "RF10"]].copy()
-base_df["Jun"] = pd.to_numeric(base_df["Jun"], errors="coerce").fillna(0).astype(int)
+# ----------- BASE DISPLAY DF -----------
+display_df = df_filtered[["Grouped Customer", "SKU Name", "May", "Jun", "RF10"]].copy()
+display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
 
-# ------ Calculate Actual + Forecast and Gap dynamically ------
-actuals = df_filtered[monthly_cols].sum(axis=1)
-base_df["Actual + Forecast"] = actuals + base_df["Jun"]
-base_df["Forecast Gap"] = base_df["RF10"] - base_df["Actual + Forecast"]
-
-# ----------- SINGLE EDITABLE TABLE -----------
-editable_df = st.data_editor(
-    base_df,
+# ----------- EDITOR -----------
+edited_df = st.data_editor(
+    display_df,
     column_config={
         "Grouped Customer": st.column_config.TextColumn(disabled=True),
         "SKU Name": st.column_config.TextColumn(disabled=True),
@@ -119,35 +117,51 @@ editable_df = st.data_editor(
             format="%d",
             disabled=False
         ),
-        "Actual + Forecast": st.column_config.NumberColumn(disabled=True),
         "RF10": st.column_config.NumberColumn(disabled=True),
-        "Forecast Gap": st.column_config.NumberColumn(disabled=True),
     },
     use_container_width=True,
-    key="forecast_table"
+    key="editor_june"
 )
 
-# ----------- LIVE TOTAL FORECAST -----------
+# ----------- STORE DRAFT -----------
+if st.button("🗂️ Store Draft (Calculate Totals)"):
+    st.session_state["stored_forecast"] = edited_df.copy()
 
-total_forecast = editable_df["Jun"].sum()
-st.markdown(
-    f"""
-    <div style="
-        margin-top: 1rem;
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #004080;
-        text-align: right;
-        padding-right: 2rem;
-    ">
-        🧮 Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# ----------- CONDITIONAL METRICS DISPLAY -----------
+if "stored_forecast" in st.session_state:
+    draft_df = st.session_state["stored_forecast"].copy()
+    draft_df["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + draft_df["Jun"]
+    draft_df["Forecast Gap"] = draft_df["RF10"] - draft_df["Actual + Forecast"]
 
-# ----------- SUBMIT BUTTON ONLY FORM -----------
+    total_forecast = draft_df["Jun"].sum()
+
+    # Reorder columns
+    draft_df = draft_df[[
+        "Grouped Customer", "SKU Name", "May", "Jun", "Actual + Forecast", "RF10", "Forecast Gap"
+    ]]
+
+    st.dataframe(
+        draft_df,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    st.markdown(
+        f"""
+        <div style="
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #004080;
+            text-align: right;
+            padding-right: 2rem;
+        ">
+            🧱 Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+# ----------- FINAL SUBMIT -----------
 with st.form("forecast_form"):
     submitted = st.form_submit_button("✅ Submit Forecast")
-
-# Optional: on submit, handle updates...
