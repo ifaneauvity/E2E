@@ -105,6 +105,9 @@ st.header("📝 Edit June Forecast")
 # Only show relevant columns
 display_df = df_filtered[["Grouped Customer", "SKU Name", "RF10", "May", "Jun"]].copy()
 
+# Clean 'Jun' column: convert '-' or blanks to 0, and force numeric
+display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
+
 # Make only 'Jun' editable — freeze others
 with st.form("forecast_form"):
     editable_df = st.data_editor(
