@@ -150,7 +150,7 @@ if "stored_forecast" in st.session_state:
     ]]
 
     st.dataframe(
-        draft_df,
+        styled_df,
         use_container_width=True,
         hide_index=True
     )
