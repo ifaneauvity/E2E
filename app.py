@@ -3,7 +3,45 @@ import pandas as pd
 from io import BytesIO
 
 st.set_page_config(page_title="Sales Forecast Input Tool", layout="wide")
-st.title("📈 Sales Forecast Input Tool")
+
+# ----------- CUSTOM STYLES -----------
+st.markdown("""
+<style>
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    h1, h2, h3 {
+        font-weight: 600;
+        color: #2F3E46;
+    }
+    .stButton>button {
+        background-color: #0078D4;
+        color: white;
+        font-weight: 600;
+        border-radius: 8px;
+        height: 3em;
+        width: auto;
+    }
+    .stDownloadButton>button {
+        background-color: #28A745;
+        color: white;
+        font-weight: 600;
+        border-radius: 8px;
+        height: 3em;
+        width: auto;
+    }
+    .stSelectbox>div>div {
+        border-radius: 6px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ----------- TITLE -----------
+
+st.title("📊 Sales Forecast Input Tool")
+
+st.markdown("Upload your forecast Excel file, select your name, apply filters, and edit your June forecast in a clean, easy-to-use interface.")
 
 # ----------- CACHED FUNCTIONS -----------
 
@@ -15,24 +53,25 @@ def load_excel(file):
 def get_unique_options(df, column):
     return sorted(df[column].dropna().unique())
 
-# ----------- APP LOGIC -----------
+# ----------- MAIN APP -----------
 
-# Step 1: Upload Excel file
-uploaded_file = st.file_uploader("Upload your Excel forecast file", type=["xlsx"])
+uploaded_file = st.file_uploader("📁 Upload your Excel forecast file", type=["xlsx"])
 
 if uploaded_file:
     with st.spinner("Loading forecast data..."):
         df = load_excel(uploaded_file)
 
-    # Step 2: Filter by Grouped Customer Owner (Sales Rep)
+    st.markdown("---")
+
+    # ----------- FILTERS SECTION -----------
+    st.header("🧭 Filter Your Data")
+
     rep_name = st.selectbox(
         "Select your name (Grouped Customer Owner)", 
         get_unique_options(df, "Grouped Customer Owner")
     )
 
-    # Step 3: Additional Filters
     col1, col2, col3 = st.columns(3)
-
     with col1:
         customer = st.selectbox("Grouped Customer", ["All"] + get_unique_options(df, "Grouped Customer"))
     with col2:
@@ -40,7 +79,6 @@ if uploaded_file:
     with col3:
         sku = st.selectbox("SKU", ["All"] + get_unique_options(df, "SKU"))
 
-    # Apply all filters in one go
     mask = df["Grouped Customer Owner"] == rep_name
     if customer != "All":
         mask &= df["Grouped Customer"] == customer
@@ -51,22 +89,24 @@ if uploaded_file:
 
     df_filtered = df[mask]
 
-    # Step 4: Editable June forecast column inside a form
-    st.subheader("✏️ Edit June Forecast")
+    st.markdown("---")
+
+    # ----------- EDITABLE SECTION -----------
+    st.header("📝 Edit Forecast")
 
     with st.form("forecast_form"):
         editable_df = st.data_editor(
             df_filtered[["Grouped Customer", "Coverage", "SKU", "Jun"]],
             num_rows="dynamic",
-            use_container_width=True
+            use_container_width=True,
+            key="editable_forecast"
         )
         submitted = st.form_submit_button("✅ Submit Forecast")
 
-    # Step 5: Submit logic
+    # ----------- SUBMISSION LOGIC -----------
     if submitted:
         st.success("Forecast submitted!")
 
-        # Update main dataframe
         updated_df = df.copy()
         for _, row in editable_df.iterrows():
             mask = (
@@ -77,7 +117,6 @@ if uploaded_file:
             )
             updated_df.loc[mask, "Jun"] = row["Jun"]
 
-        # Download updated file
         buffer = BytesIO()
         updated_df.to_excel(buffer, index=False, engine="openpyxl")
         buffer.seek(0)
