@@ -54,7 +54,6 @@ def load_forecast_from_databricks():
     return df
 
 @st.cache_data
-
 def get_unique_options(df, column):
     return sorted(df[column].dropna().unique())
 
@@ -132,34 +131,26 @@ if "stored_forecast" in st.session_state:
     draft_df = st.session_state["stored_forecast"].copy()
     draft_df["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + draft_df["Jun"]
     draft_df["Forecast Gap"] = draft_df["Actual + Forecast"] - draft_df["RF10"]
+    draft_df["Progress"] = df_filtered[monthly_cols].sum(axis=1)
+    draft_df["Progress %"] = draft_df["Progress"] / draft_df["RF10"].replace(0, 1)
 
-    # Create styled version for display
-    def color_gap(val):
-        if pd.isna(val):
-            return ""
-        color = "#28a745" if val > 0 else "#dc3545" if val < 0 else "black"
-        return f"color: {color}"
-    
-    styled_df = draft_df.style.applymap(color_gap, subset=["Forecast Gap"]).format({
-    "May": "{:.0f}",
-    "Jun": "{:.0f}",
-    "RF10": "{:.2f}",
-    "Actual + Forecast": "{:.0f}",
-    "Forecast Gap": "{:.2f}",
-    })
-    
+    def progress_bar_html(pct):
+        pct = max(0, min(pct, 1))
+        filled = int(pct * 100)
+        return f'''<div style="background:#ddd;width:100%;border-radius:4px">
+                    <div style="width:{filled}%;background:#28a745;height:10px;border-radius:4px"></div>
+                  </div>'''
+
+    draft_df["Progress"] = draft_df["Progress %"].apply(progress_bar_html)
+
     total_forecast = draft_df["Jun"].sum()
 
-    # Reorder columns
-    draft_df = draft_df[[
-        "Grouped Customer", "SKU Name", "May", "Jun", "Actual + Forecast", "RF10", "Forecast Gap"
-    ]]
+    styled_df = draft_df[[
+        "Grouped Customer", "SKU Name", "May", "Jun", "Actual + Forecast", "RF10", "Forecast Gap", "Progress"
+    ]].style.format({"Forecast Gap": "{:.2f}"}).hide_index()
 
-    st.dataframe(
-        styled_df,
-        use_container_width=True,
-        hide_index=True
-    )
+    st.write("### Stored Forecast Overview")
+    st.markdown(styled_df.to_html(escape=False), unsafe_allow_html=True)
 
     st.markdown(
         f"""
