@@ -113,13 +113,19 @@ with st.form("forecast_form"):
     editable_df = st.data_editor(
         display_df,
         column_config={
-            "Grouped Customer": st.column_config.Column(disabled=True),
-            "SKU Name": st.column_config.Column(disabled=True),
-            "RF10": st.column_config.Column(disabled=True),
-            "May": st.column_config.Column(disabled=True),
-            "Jun": st.column_config.NumberColumn(disabled=False),
+            "Grouped Customer": st.column_config.TextColumn(disabled=True),
+            "SKU Name": st.column_config.TextColumn(disabled=True),
+            "RF10": st.column_config.NumberColumn(disabled=True),
+            "May": st.column_config.NumberColumn(disabled=True),
+            "Jun": st.column_config.NumberColumn(
+                label="✏️ June Forecast (Editable)",
+                help="Enter forecast values for June",
+                format="%d",
+                disabled=False
+            )
         },
         use_container_width=True,
         key="editable_forecast"
     )
     submitted = st.form_submit_button("✅ Submit Forecast")
+
