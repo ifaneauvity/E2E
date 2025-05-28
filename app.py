@@ -61,11 +61,10 @@ def get_unique_options(df, column):
 with st.spinner("Connecting to Databricks and loading data..."):
     df = load_forecast_from_databricks()
 
-# Strip columns
 df.columns = df.columns.str.strip()
 
 # ----------- FILTERS -----------
-st.header("🧱 Filter Your Data")
+st.header("🧱️ Filter Your Data")
 
 rep_name = st.selectbox(
     "Select your name (Grouped Customer Owner)",
@@ -103,9 +102,19 @@ for col in monthly_cols + ["Jun", "RF10"]:
 display_df = df_filtered[["Grouped Customer", "SKU Name", "May", "Jun", "RF10"]].copy()
 display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
 
+# Add progress and progress %
+display_df["Progress"] = df_filtered[monthly_cols].sum(axis=1)
+display_df["Progress %"] = (display_df["Progress"] / display_df["RF10"]).clip(0, 1)
+
+display_df["Progress Bar"] = display_df["Progress %"].apply(lambda x: f"""
+<div style='background-color:#e0e0e0; border-radius:5px; width:100%; height:18px;'>
+    <div style='width:{x*100:.1f}%; background-color:#28a745; height:100%; border-radius:5px;'></div>
+</div>
+""" if not pd.isna(x) else "")
+
 # ----------- EDITOR -----------
-edited_df = st.data_editor(
-    display_df,
+styled_table = st.data_editor(
+    display_df.drop(columns=["Progress %"]),
     column_config={
         "Grouped Customer": st.column_config.TextColumn(disabled=True),
         "SKU Name": st.column_config.TextColumn(disabled=True),
@@ -117,40 +126,43 @@ edited_df = st.data_editor(
             disabled=False
         ),
         "RF10": st.column_config.NumberColumn(disabled=True),
+        "Progress": st.column_config.NumberColumn(disabled=True),
+        "Progress Bar": st.column_config.TextColumn(disabled=True)
     },
     use_container_width=True,
-    key="editor_june"
+    key="editor_june",
+    hide_index=True
 )
 
 # ----------- STORE DRAFT -----------
 if st.button("🗂️ Store Draft (Calculate Totals)"):
-    st.session_state["stored_forecast"] = edited_df.copy()
+    st.session_state["stored_forecast"] = styled_table.copy()
 
 # ----------- CONDITIONAL METRICS DISPLAY -----------
 if "stored_forecast" in st.session_state:
     draft_df = st.session_state["stored_forecast"].copy()
     draft_df["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + draft_df["Jun"]
     draft_df["Forecast Gap"] = draft_df["Actual + Forecast"] - draft_df["RF10"]
-    draft_df["Progress"] = df_filtered[monthly_cols].sum(axis=1)
-    draft_df["Progress %"] = draft_df["Progress"] / draft_df["RF10"].replace(0, 1)
 
-    def progress_bar_html(pct):
-        pct = max(0, min(pct, 1))
-        filled = int(pct * 100)
-        return f'''<div style="background:#ddd;width:100%;border-radius:4px">
-                    <div style="width:{filled}%;background:#28a745;height:10px;border-radius:4px"></div>
-                  </div>'''
+    def color_gap(val):
+        if pd.isna(val):
+            return ""
+        color = "#28a745" if val > 0 else "#dc3545" if val < 0 else "black"
+        return f"color: {color}"
 
-    draft_df["Progress"] = draft_df["Progress %"].apply(progress_bar_html)
+    styled_df = draft_df.style.applymap(color_gap, subset=["Forecast Gap"])
 
     total_forecast = draft_df["Jun"].sum()
 
-    styled_df = draft_df[[
-        "Grouped Customer", "SKU Name", "May", "Jun", "Actual + Forecast", "RF10", "Forecast Gap", "Progress"
-    ]].style.format({"Forecast Gap": "{:.2f}"}).hide_index()
+    # Reorder
+    draft_df = draft_df[[
+        "Grouped Customer", "SKU Name", "May", "Jun", "Actual + Forecast", "RF10", "Forecast Gap"
+    ]]
 
-    st.write("### Stored Forecast Overview")
-    st.markdown(styled_df.to_html(escape=False), unsafe_allow_html=True)
+    st.dataframe(
+        styled_df,
+        use_container_width=True
+    )
 
     st.markdown(
         f"""
@@ -162,7 +174,7 @@ if "stored_forecast" in st.session_state:
             text-align: right;
             padding-right: 2rem;
         ">
-            🧱 Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
+            🧱️ Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
         </div>
         """,
         unsafe_allow_html=True
