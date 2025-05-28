@@ -129,7 +129,7 @@ if "stored_forecast" in st.session_state:
 
     # Final displayed columns
     draft_df = draft_df[[
-        "Grouped Customer", "SKU Name", "May", "Jun", "RF10", "Progress", "Actual + Forecast", "Forecast Gap"
+        "Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"
     ]]
 
     st.dataframe(
