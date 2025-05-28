@@ -108,28 +108,37 @@ display_df = df_filtered[["Grouped Customer", "SKU Name", "RF10", "May", "Jun"]]
 # Clean 'Jun' column: convert '-' or blanks to 0, and force numeric
 display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
 
-# Make only 'Jun' editable — freeze others
+# Live editable data table (outside form)
+editable_df = st.data_editor(
+    display_df,
+    column_config={
+        "Grouped Customer": st.column_config.TextColumn(disabled=True),
+        "SKU Name": st.column_config.TextColumn(disabled=True),
+        "RF10": st.column_config.NumberColumn(disabled=True),
+        "May": st.column_config.NumberColumn(disabled=True),
+        "Jun": st.column_config.NumberColumn(
+            label="✏️ June Forecast (Editable)",
+            help="Enter forecast values for June",
+            format="%d",
+            disabled=False
+        )
+    },
+    use_container_width=True,
+    key="editable_forecast"
+)
+
+# Live total forecast
+total_forecast = editable_df["Jun"].sum()
+st.markdown(
+    f"""
+    <div style="margin-top: 1rem; font-size: 1.2rem; font-weight: 600; color: #004080;">
+        🧮 Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# Form only for submit button
 with st.form("forecast_form"):
-    editable_df = st.data_editor(
-        display_df,
-        column_config={
-            "Grouped Customer": st.column_config.TextColumn(disabled=True),
-            "SKU Name": st.column_config.TextColumn(disabled=True),
-            "RF10": st.column_config.NumberColumn(disabled=True),
-            "May": st.column_config.NumberColumn(disabled=True),
-            "Jun": st.column_config.NumberColumn(
-                label="✏️ June Forecast (Editable)",
-                help="Enter forecast values for June",
-                format="%d",
-                disabled=False
-            )
-        },
-        use_container_width=True,
-        key="editable_forecast"
-    )
-
-    total_forecast = editable_df["Jun"].sum()
-    st.markdown(f"**🧮 Total June Forecast: {total_forecast:,.0f} units**")
-
     submitted = st.form_submit_button("✅ Submit Forecast")
 
