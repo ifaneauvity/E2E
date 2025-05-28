@@ -132,7 +132,7 @@ edited_df = edited_df[[
 
 # ----------- DISPLAY MAIN TABLE -----------
 editable_df = st.data_editor(
-    final_df,
+    edited_df,
     column_config={
         "Grouped Customer": st.column_config.TextColumn(disabled=True),
         "SKU Name": st.column_config.TextColumn(disabled=True),
