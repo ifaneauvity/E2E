@@ -38,7 +38,6 @@ st.markdown("""
 st.title("📊 Sales Forecast Input Tool")
 
 # ----------- LOAD FROM DATABRICKS -----------
-
 @st.cache_data
 def load_forecast_from_databricks():
     connection = sql.connect(
@@ -61,61 +60,70 @@ def get_unique_options(df, column):
     return sorted(df[column].dropna().unique())
 
 # ----------- APP LOGIC -----------
-
 with st.spinner("Connecting to Databricks and loading data..."):
     df = load_forecast_from_databricks()
 
-# Strip columns after loading
 df.columns = df.columns.str.strip()
 
 # ----------- FILTERS -----------
 st.header("🧭 Filter Your Data")
 
-# Step 1: Select rep name
 rep_name = st.selectbox(
     "Select your name (Grouped Customer Owner)",
     get_unique_options(df, "Grouped Customer Owner")
 )
 
-# Filter the full dataset down to the selected rep first
 df_rep = df[df["Grouped Customer Owner"] == rep_name]
 
-# Step 2: Dynamically filter options based on rep's data
 col1, col2 = st.columns(2)
-
 with col1:
     customer = st.selectbox("Grouped Customer", ["All"] + get_unique_options(df_rep, "Grouped Customer"))
 with col2:
     sku_name = st.selectbox("SKU Name", ["All"] + get_unique_options(df_rep, "SKU Name"))
 
-# Apply selected filters
 mask = (df["Grouped Customer Owner"] == rep_name)
 if customer != "All":
-    mask &= (df["Grouped Customer"] == customer)
+    mask &= df["Grouped Customer"] == customer
 if sku_name != "All":
-    mask &= (df["SKU Name"] == sku_name)
+    mask &= df["SKU Name"] == sku_name
 
 df_filtered = df[mask]
 
 st.markdown("---")
-
-# ----------- DATA EDITING FORM -----------
 st.header("📝 Edit June Forecast")
 
-# Only show relevant columns
-display_df = df_filtered[["Grouped Customer", "SKU Name", "RF10", "May", "Jun"]].copy()
+# ----------- DATA PROCESSING -----------
 
-# Clean 'Jun' column: convert '-' or blanks to 0, and force numeric
-display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
+# Define monthly columns
+monthly_cols = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"]
 
-# Live editable data table (outside form)
+# Ensure all needed columns exist and are numeric
+for col in monthly_cols + ["Jun", "RF10"]:
+    if col in df_filtered.columns:
+        df_filtered[col] = pd.to_numeric(df_filtered[col], errors="coerce").fillna(0)
+    else:
+        df_filtered[col] = 0
+
+# Create calculated columns
+df_filtered["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + df_filtered["Jun"]
+df_filtered["Forecast Gap"] = df_filtered["RF10"] - df_filtered["Actual + Forecast"]
+
+# Reorder and clean up display columns
+display_df = df_filtered[[
+    "Grouped Customer", "SKU Name", "May", "Jun",
+    "Actual + Forecast", "RF10", "Forecast Gap"
+]].copy()
+
+# ----------- EDITABLE DATA TABLE -----------
 editable_df = st.data_editor(
     display_df,
     column_config={
         "Grouped Customer": st.column_config.TextColumn(disabled=True),
         "SKU Name": st.column_config.TextColumn(disabled=True),
-        "RF10": st.column_config.NumberColumn(disabled=True),
         "May": st.column_config.NumberColumn(disabled=True),
+        "RF10": st.column_config.NumberColumn(disabled=True),
+        "Actual + Forecast": st.column_config.NumberColumn(disabled=True),
+        "Forecast Gap": st.column_config.NumberColumn(disabled=True),
         "Jun": st.column_config.NumberColumn(
             label="✏️ June Forecast (Editable)",
             help="Enter forecast values for June",
@@ -127,7 +135,7 @@ editable_df = st.data_editor(
     key="editable_forecast"
 )
 
-# Live total forecast (below the table)
+# ----------- TOTAL FORECAST DISPLAY -----------
 total_forecast = editable_df["Jun"].sum()
 st.markdown(
     f"""
@@ -145,7 +153,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Form only for submit button
+# ----------- SUBMIT BUTTON -----------
 with st.form("forecast_form"):
     submitted = st.form_submit_button("✅ Submit Forecast")
-
