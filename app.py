@@ -35,7 +35,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Sales Forecast Input Tool")
+st.title("\U0001F4CA Sales Forecast Input Tool")
 
 # ----------- LOAD FROM DATABRICKS -----------
 @st.cache_data
@@ -64,7 +64,7 @@ with st.spinner("Connecting to Databricks and loading data..."):
 df.columns = df.columns.str.strip()
 
 # ----------- FILTERS -----------
-st.header("🧱️ Filter Your Data")
+st.header("\U0001F9F1 Filter Your Data")
 
 rep_name = st.selectbox(
     "Select your name (Grouped Customer Owner)",
@@ -88,7 +88,7 @@ if sku_name != "All":
 df_filtered = df[mask]
 
 st.markdown("---")
-st.header("🖍️ Edit June Forecast")
+st.header("\U0001F58D Edit June Forecast")
 
 # ----------- PREPARE COLUMNS -----------
 monthly_cols = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"]
@@ -102,13 +102,9 @@ for col in monthly_cols + ["Jun", "RF10"]:
 display_df = df_filtered[["Grouped Customer", "SKU Name", "May", "Jun", "RF10"]].copy()
 display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
 
-# Add progress
-display_df["Progress"] = df_filtered[monthly_cols].sum(axis=1)
-""" if not pd.isna(x) else "")
-
 # ----------- EDITOR -----------
-styled_table = st.data_editor(
-    display_df.drop(columns=["Progress %"]),
+edited_df = st.data_editor(
+    display_df,
     column_config={
         "Grouped Customer": st.column_config.TextColumn(disabled=True),
         "SKU Name": st.column_config.TextColumn(disabled=True),
@@ -120,43 +116,36 @@ styled_table = st.data_editor(
             disabled=False
         ),
         "RF10": st.column_config.NumberColumn(disabled=True),
-        "Progress": st.column_config.NumberColumn(disabled=True)
     },
     use_container_width=True,
-    key="editor_june",
-    hide_index=True
+    key="editor_june"
 )
 
 # ----------- STORE DRAFT -----------
-if st.button("🗂️ Store Draft (Calculate Totals)"):
-    st.session_state["stored_forecast"] = styled_table.copy()
+if st.button("\U0001F5C2️ Store Draft (Calculate Totals)"):
+    st.session_state["stored_forecast"] = edited_df.copy()
 
 # ----------- CONDITIONAL METRICS DISPLAY -----------
 if "stored_forecast" in st.session_state:
     draft_df = st.session_state["stored_forecast"].copy()
-    draft_df["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + draft_df["Jun"]
+    draft_df["Progress"] = df_filtered[monthly_cols].sum(axis=1)
+    draft_df["Actual + Forecast"] = draft_df["Progress"] + draft_df["Jun"]
     draft_df["Forecast Gap"] = draft_df["Actual + Forecast"] - draft_df["RF10"]
 
-    def color_gap(val):
-        if pd.isna(val):
-            return ""
-        color = "#28a745" if val > 0 else "#dc3545" if val < 0 else "black"
-        return f"color: {color}"
-
-    styled_df = draft_df.style.applymap(color_gap, subset=["Forecast Gap"])
-
-    total_forecast = draft_df["Jun"].sum()
-
-    # Reorder
+    # Reorder columns
     draft_df = draft_df[[
-        "Grouped Customer", "SKU Name", "May", "Jun", "Actual + Forecast", "RF10", "Forecast Gap"
+        "Grouped Customer", "SKU Name", "May", "Jun", "RF10", "Progress", "Actual + Forecast", "Forecast Gap"
     ]]
 
     st.dataframe(
-        styled_df,
-        use_container_width=True
+        draft_df.style.applymap(
+            lambda val: "color: #28a745;" if val > 0 else ("color: #dc3545;" if val < 0 else "color: black;"),
+            subset=["Forecast Gap"]
+        ),
+        use_container_width=True,
     )
 
+    total_forecast = draft_df["Jun"].sum()
     st.markdown(
         f"""
         <div style="
@@ -167,7 +156,7 @@ if "stored_forecast" in st.session_state:
             text-align: right;
             padding-right: 2rem;
         ">
-            🧱️ Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
+            \U0001F9F1 Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
         </div>
         """,
         unsafe_allow_html=True
