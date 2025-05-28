@@ -131,7 +131,16 @@ if st.button("🗂️ Store Draft (Calculate Totals)"):
 if "stored_forecast" in st.session_state:
     draft_df = st.session_state["stored_forecast"].copy()
     draft_df["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + draft_df["Jun"]
-    draft_df["Forecast Gap"] = draft_df["RF10"] - draft_df["Actual + Forecast"]
+    draft_df["Forecast Gap"] = draft_df["Actual + Forecast"] - draft_df["RF10"]
+
+    # Create styled version for display
+    def color_gap(val):
+        if pd.isna(val):
+            return ""
+        color = "#28a745" if val > 0 else "#dc3545" if val < 0 else "black"
+        return f"color: {color}"
+    
+    styled_df = draft_df.style.applymap(color_gap, subset=["Forecast Gap"])
 
     total_forecast = draft_df["Jun"].sum()
 
