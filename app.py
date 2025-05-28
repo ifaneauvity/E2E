@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from databricks import sql
 from io import BytesIO
 
 st.set_page_config(page_title="Sales Forecast Input Tool", layout="wide")
@@ -31,99 +32,104 @@ st.markdown("""
         height: 3em;
         width: auto;
     }
-    .stSelectbox>div>div {
-        border-radius: 6px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# ----------- TITLE -----------
-
 st.title("📊 Sales Forecast Input Tool")
 
-st.markdown("Upload your forecast Excel file, select your name, apply filters, and edit your June forecast in a clean, easy-to-use interface.")
-
-# ----------- CACHED FUNCTIONS -----------
+# ----------- LOAD FROM DATABRICKS -----------
 
 @st.cache_data
-def load_excel(file):
-    return pd.read_excel(file, engine="openpyxl")
+def load_forecast_from_databricks():
+    connection = sql.connect(
+        server_hostname=st.secrets["databricks_host"].replace("https://", ""),
+        http_path=st.secrets["databricks_path"],
+        access_token=st.secrets["databricks_token"]
+    )
+
+    query = f"""
+        SELECT * 
+        FROM {st.secrets["databricks_catalog"]}.{st.secrets["databricks_schema"]}.{st.secrets["databricks_table"]}
+    """
+
+    df = pd.read_sql(query, connection)
+    connection.close()
+    return df
 
 @st.cache_data
 def get_unique_options(df, column):
     return sorted(df[column].dropna().unique())
 
-# ----------- MAIN APP -----------
+# ----------- APP LOGIC -----------
 
-uploaded_file = st.file_uploader("📁 Upload your Excel forecast file", type=["xlsx"])
+with st.spinner("Connecting to Databricks and loading data..."):
+    df = load_forecast_from_databricks()
 
-if uploaded_file:
-    with st.spinner("Loading forecast data..."):
-        df = load_excel(uploaded_file)
+st.markdown("Upload not needed — data is loaded directly from Databricks.")
 
-    st.markdown("---")
+# ----------- FILTERS -----------
+st.header("🧭 Filter Your Data")
 
-    # ----------- FILTERS SECTION -----------
-    st.header("🧭 Filter Your Data")
+rep_name = st.selectbox(
+    "Select your name (Grouped Customer Owner)", 
+    get_unique_options(df, "Grouped Customer Owner")
+)
 
-    rep_name = st.selectbox(
-        "Select your name (Grouped Customer Owner)", 
-        get_unique_options(df, "Grouped Customer Owner")
+col1, col2, col3 = st.columns(3)
+with col1:
+    customer = st.selectbox("Grouped Customer", ["All"] + get_unique_options(df, "Grouped Customer"))
+with col2:
+    coverage = st.selectbox("Coverage", ["All"] + get_unique_options(df, "Coverage"))
+with col3:
+    sku = st.selectbox("SKU", ["All"] + get_unique_options(df, "SKU"))
+
+mask = df["Grouped Customer Owner"] == rep_name
+if customer != "All":
+    mask &= df["Grouped Customer"] == customer
+if coverage != "All":
+    mask &= df["Coverage"] == coverage
+if sku != "All":
+    mask &= df["SKU"] == sku
+
+df_filtered = df[mask]
+
+st.markdown("---")
+
+# ----------- DATA EDITING -----------
+st.header("📝 Edit Forecast")
+
+with st.form("forecast_form"):
+    editable_df = st.data_editor(
+        df_filtered[["Grouped Customer", "Coverage", "SKU", "Jun"]],
+        num_rows="dynamic",
+        use_container_width=True,
+        key="editable_forecast"
+    )
+    submitted = st.form_submit_button("✅ Submit Forecast")
+
+# ----------- SUBMIT HANDLER -----------
+if submitted:
+    st.success("Forecast submitted!")
+
+    updated_df = df.copy()
+    for _, row in editable_df.iterrows():
+        mask = (
+            (updated_df["Grouped Customer Owner"] == rep_name) &
+            (updated_df["Grouped Customer"] == row["Grouped Customer"]) &
+            (updated_df["Coverage"] == row["Coverage"]) &
+            (updated_df["SKU"] == row["SKU"])
+        )
+        updated_df.loc[mask, "Jun"] = row["Jun"]
+
+    buffer = BytesIO()
+    updated_df.to_excel(buffer, index=False, engine="openpyxl")
+    buffer.seek(0)
+
+    st.download_button(
+        label="📥 Download Updated Forecast File",
+        data=buffer,
+        file_name="updated_forecast.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        customer = st.selectbox("Grouped Customer", ["All"] + get_unique_options(df, "Grouped Customer"))
-    with col2:
-        coverage = st.selectbox("Coverage", ["All"] + get_unique_options(df, "Coverage"))
-    with col3:
-        sku = st.selectbox("SKU", ["All"] + get_unique_options(df, "SKU"))
-
-    mask = df["Grouped Customer Owner"] == rep_name
-    if customer != "All":
-        mask &= df["Grouped Customer"] == customer
-    if coverage != "All":
-        mask &= df["Coverage"] == coverage
-    if sku != "All":
-        mask &= df["SKU"] == sku
-
-    df_filtered = df[mask]
-
-    st.markdown("---")
-
-    # ----------- EDITABLE SECTION -----------
-    st.header("📝 Edit Forecast")
-
-    with st.form("forecast_form"):
-        editable_df = st.data_editor(
-            df_filtered[["Grouped Customer", "Coverage", "SKU", "Jun"]],
-            num_rows="dynamic",
-            use_container_width=True,
-            key="editable_forecast"
-        )
-        submitted = st.form_submit_button("✅ Submit Forecast")
-
-    # ----------- SUBMISSION LOGIC -----------
-    if submitted:
-        st.success("Forecast submitted!")
-
-        updated_df = df.copy()
-        for _, row in editable_df.iterrows():
-            mask = (
-                (updated_df["Grouped Customer Owner"] == rep_name) &
-                (updated_df["Grouped Customer"] == row["Grouped Customer"]) &
-                (updated_df["Coverage"] == row["Coverage"]) &
-                (updated_df["SKU"] == row["SKU"])
-            )
-            updated_df.loc[mask, "Jun"] = row["Jun"]
-
-        buffer = BytesIO()
-        updated_df.to_excel(buffer, index=False, engine="openpyxl")
-        buffer.seek(0)
-
-        st.download_button(
-            label="📥 Download Updated Forecast File",
-            data=buffer,
-            file_name="updated_forecast.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    # In the next step, we will write this updated data back to Databricks
