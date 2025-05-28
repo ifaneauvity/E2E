@@ -9,11 +9,10 @@ st.title("📈 Sales Forecast Input Tool")
 uploaded_file = st.file_uploader("Upload your Excel forecast file", type=["xlsx"])
 
 if uploaded_file:
-    df = pd.read_excel(uploaded_file)
+    df = pd.read_excel(uploaded_file, engine="openpyxl")
 
     # Step 2: Filter by Grouped Customer Owner (Sales Rep)
     rep_name = st.selectbox("Select your name (Grouped Customer Owner)", df["Grouped Customer Owner"].dropna().unique())
-
     df_filtered = df[df["Grouped Customer Owner"] == rep_name]
 
     # Step 3: Additional Filters
@@ -34,40 +33,40 @@ if uploaded_file:
     if sku != "All":
         df_filtered = df_filtered[df_filtered["SKU"] == sku]
 
+    # Step 4: Editable June forecast column inside a form
     st.subheader("✏️ Edit June Forecast")
-
-with st.form("forecast_form"):
-    editable_df = st.data_editor(
-        df_filtered[["Grouped Customer", "Coverage", "SKU", "Jun"]],
-        num_rows="dynamic",
-        use_container_width=True
-    )
-    
-    submitted = st.form_submit_button("✅ Submit Forecast")
-
-if submitted:
-    st.success("Forecast submitted!")
-
-    # Replace June values in original df with edited values
-    updated_df = df.copy()
-    for i, row in editable_df.iterrows():
-        mask = (
-            (updated_df["Grouped Customer Owner"] == rep_name) &
-            (updated_df["Grouped Customer"] == row["Grouped Customer"]) &
-            (updated_df["Coverage"] == row["Coverage"]) &
-            (updated_df["SKU"] == row["SKU"])
+    with st.form("forecast_form"):
+        editable_df = st.data_editor(
+            df_filtered[["Grouped Customer", "Coverage", "SKU", "Jun"]],
+            num_rows="dynamic",
+            use_container_width=True
         )
-        updated_df.loc[mask, "Jun"] = row["Jun"]
+        
+        submitted = st.form_submit_button("✅ Submit Forecast")
 
-    # Provide download link
-    buffer = BytesIO()
-    updated_df.to_excel(buffer, index=False, engine="openpyxl")
-    buffer.seek(0)
+    # Step 5: Process after submission
+    if submitted:
+        st.success("Forecast submitted!")
 
-    st.download_button(
-        label="📥 Download Updated Forecast File",
-        data=buffer,
-        file_name="updated_forecast.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+        # Replace June values in original df with edited values
+        updated_df = df.copy()
+        for i, row in editable_df.iterrows():
+            mask = (
+                (updated_df["Grouped Customer Owner"] == rep_name) &
+                (updated_df["Grouped Customer"] == row["Grouped Customer"]) &
+                (updated_df["Coverage"] == row["Coverage"]) &
+                (updated_df["SKU"] == row["SKU"])
+            )
+            updated_df.loc[mask, "Jun"] = row["Jun"]
 
+        # Provide download link
+        buffer = BytesIO()
+        updated_df.to_excel(buffer, index=False, engine="openpyxl")
+        buffer.seek(0)
+
+        st.download_button(
+            label="📥 Download Updated Forecast File",
+            data=buffer,
+            file_name="updated_forecast.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
