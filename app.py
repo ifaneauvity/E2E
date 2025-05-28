@@ -127,5 +127,9 @@ with st.form("forecast_form"):
         use_container_width=True,
         key="editable_forecast"
     )
+
+    total_forecast = editable_df["Jun"].sum()
+    st.markdown(f"**🧮 Total June Forecast: {total_forecast:,.0f} units**")
+
     submitted = st.form_submit_button("✅ Submit Forecast")
 
