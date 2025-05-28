@@ -65,6 +65,9 @@ def get_unique_options(df, column):
 with st.spinner("Connecting to Databricks and loading data..."):
     df = load_forecast_from_databricks()
 
+# ✅ Strip spaces from column names
+df.columns = df.columns.str.strip()
+
 st.markdown("Upload not needed — data is loaded directly from Databricks.")
 
 # ----------- FILTERS -----------
