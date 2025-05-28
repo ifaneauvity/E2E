@@ -131,13 +131,19 @@ editable_df = st.data_editor(
 total_forecast = editable_df["Jun"].sum()
 st.markdown(
     f"""
-    <div style="margin-top: 1rem; font-size: 1.2rem; font-weight: 600; color: #004080;">
+    <div style="
+        margin-top: 1rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #004080;
+        text-align: right;
+        padding-right: 2rem;
+    ">
         🧮 Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
     </div>
     """,
     unsafe_allow_html=True
 )
-
 
 # Form only for submit button
 with st.form("forecast_form"):
