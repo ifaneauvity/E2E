@@ -140,8 +140,14 @@ if "stored_forecast" in st.session_state:
         color = "#28a745" if val > 0 else "#dc3545" if val < 0 else "black"
         return f"color: {color}"
     
-    styled_df = draft_df.style.applymap(color_gap, subset=["Forecast Gap"])
-
+    styled_df = draft_df.style.applymap(color_gap, subset=["Forecast Gap"]).format({
+    "May": "{:.0f}",
+    "Jun": "{:.0f}",
+    "RF10": "{:.2f}",
+    "Actual + Forecast": "{:.0f}",
+    "Forecast Gap": "{:.2f}",
+    })
+    
     total_forecast = draft_df["Jun"].sum()
 
     # Reorder columns
