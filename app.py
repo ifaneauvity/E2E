@@ -90,25 +90,45 @@ df_filtered = df[mask]
 st.markdown("---")
 st.header("📝 Edit June Forecast")
 
-# ----------- DATA CLEANING & PROCESSING -----------
+# ----------- DATA CLEANING -----------
 monthly_cols = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"]
-
 for col in monthly_cols + ["Jun", "RF10"]:
     if col not in df_filtered.columns:
         df_filtered[col] = 0
     df_filtered[col] = pd.to_numeric(df_filtered[col], errors="coerce").fillna(0)
 
-# Build initial view
-final_df = df_filtered[[
-    "Grouped Customer", "SKU Name", "May", "Jun"
-]].copy()
+# Prepare display
+base_df = df_filtered[["Grouped Customer", "SKU Name", "May", "Jun", "RF10"]].copy()
+base_df["Jun"] = pd.to_numeric(base_df["Jun"], errors="coerce").fillna(0).astype(int)
 
-final_df["Jun"] = pd.to_numeric(final_df["Jun"], errors="coerce").fillna(0)
+# ----------- EDITABLE TABLE -----------
+edited_df = st.data_editor(
+    base_df,
+    column_config={
+        "Grouped Customer": st.column_config.TextColumn(disabled=True),
+        "SKU Name": st.column_config.TextColumn(disabled=True),
+        "May": st.column_config.NumberColumn(disabled=True),
+        "Jun": st.column_config.NumberColumn(
+            label="✏️ June Forecast (Editable)",
+            help="Enter forecast values for June",
+            format="%d",
+            disabled=False
+        ),
+        "RF10": st.column_config.NumberColumn(disabled=True),
+    },
+    use_container_width=True,
+    key="forecast_edit"
+)
 
-# Dynamic calculations
-final_df["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + final_df["Jun"]
-final_df["RF10"] = df_filtered["RF10"]
-final_df["Forecast Gap"] = final_df["RF10"] - final_df["Actual + Forecast"]
+# ----------- CALCULATE DYNAMIC COLUMNS -----------
+
+edited_df["Actual + Forecast"] = df_filtered[monthly_cols].sum(axis=1) + edited_df["Jun"]
+edited_df["Forecast Gap"] = edited_df["RF10"] - edited_df["Actual + Forecast"]
+
+# Reorder
+edited_df = edited_df[[
+    "Grouped Customer", "SKU Name", "May", "Jun", "Actual + Forecast", "RF10", "Forecast Gap"
+]]
 
 # ----------- DISPLAY MAIN TABLE -----------
 editable_df = st.data_editor(
