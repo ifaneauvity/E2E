@@ -102,14 +102,8 @@ for col in monthly_cols + ["Jun", "RF10"]:
 display_df = df_filtered[["Grouped Customer", "SKU Name", "May", "Jun", "RF10"]].copy()
 display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
 
-# Add progress and progress %
+# Add progress
 display_df["Progress"] = df_filtered[monthly_cols].sum(axis=1)
-display_df["Progress %"] = (display_df["Progress"] / display_df["RF10"]).clip(0, 1)
-
-display_df["Progress Bar"] = display_df["Progress %"].apply(lambda x: f"""
-<div style='background-color:#e0e0e0; border-radius:5px; width:100%; height:18px;'>
-    <div style='width:{x*100:.1f}%; background-color:#28a745; height:100%; border-radius:5px;'></div>
-</div>
 """ if not pd.isna(x) else "")
 
 # ----------- EDITOR -----------
@@ -126,8 +120,7 @@ styled_table = st.data_editor(
             disabled=False
         ),
         "RF10": st.column_config.NumberColumn(disabled=True),
-        "Progress": st.column_config.NumberColumn(disabled=True),
-        "Progress Bar": st.column_config.TextColumn(disabled=True)
+        "Progress": st.column_config.NumberColumn(disabled=True)
     },
     use_container_width=True,
     key="editor_june",
