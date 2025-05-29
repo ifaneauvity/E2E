@@ -74,6 +74,16 @@ with col1:
 with col2:
     sku_name = st.selectbox("SKU Name", ["All"] + get_unique_options(df_rep, "SKU Name"))
 
+optional_columns = [
+    "A24 Total", "A24 Total_9L", "A24 Total_Value",
+    "Contract_Vol_Q1", "Contract_Vol_Q2", "Contract_Vol_Q3", "Contract_Vol_Q4",
+    "Contract_Vol_Q1_9L", "Contract_Vol_Q2_9L", "Contract_Vol_Q3_9L", "Contract_Vol_Q4_9L",
+    "Contract_Vol_9L", "Contract_Value_Q1", "Contract_Value_Q2", "Contract_Value_Q3", "Contract_Value_Q4",
+    "RF10_9L", "RF10_Value"
+]
+
+selected_optional_columns = st.multiselect("📊 Select Additional Columns to Display", optional_columns)
+
 mask = pd.Series([True] * len(df))
 if rep_name != "All":
     mask &= df["Grouped Customer Owner"] == rep_name
@@ -97,8 +107,15 @@ display_df["Progress"] = df_filtered[monthly_cols].sum(axis=1).astype(int)
 display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
 display_df["RF10"] = display_df["RF10"].round(0).astype(int)
 
+for col in selected_optional_columns:
+    if col in df_filtered.columns:
+        display_df[col] = df_filtered[col]
+
+main_columns = ["Grouped Customer", "SKU Name", "RF10", "Progress", "Jun"]
+final_columns = main_columns + selected_optional_columns
+
 edited_df = st.data_editor(
-    display_df[["Grouped Customer", "SKU Name", "RF10", "Progress", "Jun"]],
+    display_df[final_columns],
     column_config={
         "Grouped Customer": st.column_config.TextColumn(disabled=True),
         "SKU Name": st.column_config.TextColumn(disabled=True),
