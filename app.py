@@ -151,32 +151,32 @@ if "stored_forecast" in st.session_state:
     # Reorder and clean up for bottom table
     table_df = draft_df[["Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"]].copy()
 
-    def format_forecast_gap(val):
-        color = "green" if val > 0 else "red" if val < 0 else "black"
-        return f"<span style='color: {color}; font-weight: bold;'>{val}</span>"
+    def color_cell(val):
+        if isinstance(val, int):
+            return val
+        return val
 
-    styled_cells = {
-        col: table_df[col] if col != "Forecast Gap" else [format_forecast_gap(v) for v in table_df[col]]
+    colors = ["green" if v > 0 else "red" if v < 0 else "black" for v in table_df["Forecast Gap"]]
+    formatted_gap = [f"<span style='color: {color}; font-weight: bold;'>{val}</span>" for val, color in zip(table_df["Forecast Gap"], colors)]
+    values = [
+        table_df[col].tolist() if col != "Forecast Gap" else formatted_gap
         for col in table_df.columns
-    }
+    ]
 
     fig = go.Figure(data=[go.Table(
         header=dict(
             values=list(table_df.columns),
             fill_color='#003049',
             align='left',
-            font=dict(color='white', size=14)
+            font=dict(color='white', size=16)
         ),
         cells=dict(
-            values=list(styled_cells.values()),
-            fill_color=[["#f6f6f6" if i % 2 == 0 else "#ffffff" for i in range(len(table_df))]] * len(table_df.columns),
+            values=values,
+            fill_color=[['#f6f6f6', '#ffffff'] * (len(table_df) // 2 + 1)][:len(table_df)],
             align='left',
-            font=dict(size=14),
-            format=[""] * len(table_df.columns),
-            height=30,
-            line_color='lightgrey',
-            suffix=None,
-            unsafe_allow_html=True
+            font=dict(size=16),
+            height=28,
+            line_color='lightgrey'
         )
     )])
     fig.update_layout(margin=dict(l=0, r=0, t=10, b=0))
