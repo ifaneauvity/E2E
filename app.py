@@ -149,7 +149,7 @@ if "stored_forecast" in st.session_state:
     total_actual_forecast = draft_df["Actual + Forecast"].sum()
 
     draft_df = draft_df[[
-        "Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"
+        "Grouped Customer", "SKU Name", "RF10", "Progress", "Jun", "Actual + Forecast", "Forecast Gap"
     ]]
 
     st.dataframe(
@@ -158,16 +158,11 @@ if "stored_forecast" in st.session_state:
         hide_index=True
     )
 
-    st.markdown(
-        f"""
-        <div style="margin-top: 1rem; font-size: 1.2rem; font-weight: 600; color: #004080; text-align: right; padding-right: 2rem;">
-            📦 Total RF10: <span style="color:#0078D4;">{total_rf10:,.0f}</span> &nbsp;&nbsp;|
-            📈 Total Actual + Forecast: <span style="color:#6f42c1;">{total_actual_forecast:,.0f}</span> &nbsp;&nbsp;|
-            🧱 Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # KPI cards display
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total RF10", f"{total_rf10:,.0f}")
+    col2.metric("Total Actual + Forecast", f"{total_actual_forecast:,.0f}")
+    col3.metric("Total June Forecast", f"{total_forecast:,.0f} units")
 
 # ----------- SUBMIT FORM -----------
 with st.form("forecast_form"):
