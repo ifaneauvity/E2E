@@ -158,11 +158,33 @@ if "stored_forecast" in st.session_state:
         hide_index=True
     )
 
-    # KPI cards display
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total RF10", f"{total_rf10:,.0f}")
-    col2.metric("Total Actual + Forecast", f"{total_actual_forecast:,.0f}")
-    col3.metric("Total June Forecast", f"{total_forecast:,.0f} units")
+    # KPI cards display (styled like metric cards)
+kpi1, kpi2, kpi3 = st.columns(3)
+
+with kpi1:
+    st.markdown("""
+    <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <h4 style="margin-bottom: 0.5rem; color: #333;">Total RF10</h4>
+        <p style="font-size: 1.8rem; font-weight: bold; color: #1f77b4;">{:,}</p>
+    </div>
+    """.format(total_rf10), unsafe_allow_html=True)
+
+with kpi2:
+    st.markdown("""
+    <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <h4 style="margin-bottom: 0.5rem; color: #333;">Total Actual + Forecast</h4>
+        <p style="font-size: 1.8rem; font-weight: bold; color: #9467bd;">{:,}</p>
+    </div>
+    """.format(total_actual_forecast), unsafe_allow_html=True)
+
+with kpi3:
+    st.markdown("""
+    <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <h4 style="margin-bottom: 0.5rem; color: #333;">Total June Forecast</h4>
+        <p style="font-size: 1.8rem; font-weight: bold; color: #2ca02c;">{:,} units</p>
+    </div>
+    """.format(total_forecast), unsafe_allow_html=True)
+
 
 # ----------- SUBMIT FORM -----------
 with st.form("forecast_form"):
