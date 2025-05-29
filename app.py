@@ -120,8 +120,8 @@ column_config = {
     "RF10": st.column_config.NumberColumn(disabled=True),
     "Progress": st.column_config.NumberColumn(disabled=True),
     "Jun": st.column_config.NumberColumn(
-        label="✏️ June Forecast (Editable)",
-        help="Enter forecast values for June",
+        label="🔶 EDIT June Forecast",
+        help="You can modify this value. All other columns are locked.",
         format="%d",
         disabled=False
     )
