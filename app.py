@@ -24,6 +24,26 @@ st.markdown("""
         height: 3em;
         width: auto;
     }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-family: Arial, sans-serif;
+    }
+    thead tr {
+        background-color: #003049;
+        color: white;
+    }
+    tbody tr:nth-child(odd) {
+        background-color: #f6f6f6;
+    }
+    tbody tr:nth-child(even) {
+        background-color: #ffffff;
+    }
+    td, th {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,17 +102,16 @@ for col in monthly_cols + ["Jun", "RF10"]:
     df_filtered[col] = pd.to_numeric(df_filtered[col], errors="coerce").fillna(0)
 
 # ----------- BUILD EDITOR TABLE -----------
-display_df = df_filtered[["Grouped Customer", "SKU Name", "May", "Jun", "RF10"]].copy()
+display_df = df_filtered[["Grouped Customer", "SKU Name", "Jun", "RF10"]].copy()
 display_df["Progress"] = df_filtered[monthly_cols].sum(axis=1).astype(int)
 display_df["Jun"] = pd.to_numeric(display_df["Jun"], errors="coerce").fillna(0).astype(int)
 display_df["RF10"] = display_df["RF10"].round(0).astype(int)
 
 edited_df = st.data_editor(
-    display_df[["Grouped Customer", "SKU Name", "May", "Jun", "RF10", "Progress"]],
+    display_df[["Grouped Customer", "SKU Name", "RF10", "Progress", "Jun"]],
     column_config={
         "Grouped Customer": st.column_config.TextColumn(disabled=True),
         "SKU Name": st.column_config.TextColumn(disabled=True),
-        "May": st.column_config.NumberColumn(disabled=True),
         "RF10": st.column_config.NumberColumn(disabled=True),
         "Progress": st.column_config.NumberColumn(disabled=True),
         "Jun": st.column_config.NumberColumn(
@@ -127,9 +146,8 @@ if "stored_forecast" in st.session_state:
 
     total_forecast = draft_df["Jun"].sum()
 
-    # Final displayed columns
     draft_df = draft_df[[
-        "Grouped Customer", "SKU Name", "May", "Jun", "RF10", "Progress", "Actual + Forecast", "Forecast Gap"
+        "Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"
     ]]
 
     st.dataframe(
@@ -148,6 +166,5 @@ if "stored_forecast" in st.session_state:
     )
 
 # ----------- SUBMIT FORM -----------
-
 with st.form("forecast_form"):
     submitted = st.form_submit_button("✅ Submit Forecast")
