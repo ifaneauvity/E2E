@@ -114,20 +114,25 @@ for col in selected_optional_columns:
 main_columns = ["Grouped Customer", "SKU Name", "RF10", "Progress", "Jun"]
 final_columns = main_columns + selected_optional_columns
 
+column_config = {
+    "Grouped Customer": st.column_config.TextColumn(disabled=True),
+    "SKU Name": st.column_config.TextColumn(disabled=True),
+    "RF10": st.column_config.NumberColumn(disabled=True),
+    "Progress": st.column_config.NumberColumn(disabled=True),
+    "Jun": st.column_config.NumberColumn(
+        label="✏️ June Forecast (Editable)",
+        help="Enter forecast values for June",
+        format="%d",
+        disabled=False
+    )
+}
+
+for col in selected_optional_columns:
+    column_config[col] = st.column_config.TextColumn(disabled=True)
+
 edited_df = st.data_editor(
     display_df[final_columns],
-    column_config={
-        "Grouped Customer": st.column_config.TextColumn(disabled=True),
-        "SKU Name": st.column_config.TextColumn(disabled=True),
-        "RF10": st.column_config.NumberColumn(disabled=True),
-        "Progress": st.column_config.NumberColumn(disabled=True),
-        "Jun": st.column_config.NumberColumn(
-            label="✏️ June Forecast (Editable)",
-            help="Enter forecast values for June",
-            format="%d",
-            disabled=False
-        )
-    },
+    column_config=column_config,
     use_container_width=True,
     key="editor_june"
 )
