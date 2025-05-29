@@ -58,7 +58,7 @@ with st.spinner("Connecting to Databricks and loading data..."):
 df.columns = df.columns.str.strip()
 
 # ----------- FILTERING UI -----------
-st.header("🧱 Filter Your Data")
+st.header("Filter Your Data")
 
 rep_options = ["All"] + get_unique_options(df, "Grouped Customer Owner")
 rep_name = st.selectbox("Select your name (Grouped Customer Owner)", rep_options)
