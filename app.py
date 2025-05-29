@@ -12,6 +12,7 @@ st.markdown("""
     .block-container {
         padding-top: 2rem;
         padding-bottom: 2rem;
+        font-size: 1.2rem;
     }
     h1, h2, h3 {
         font-weight: 600;
@@ -24,6 +25,7 @@ st.markdown("""
         border-radius: 8px;
         height: 3em;
         width: auto;
+        font-size: 1.2rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -58,8 +60,13 @@ df.columns = df.columns.str.strip()
 # ----------- FILTERING UI -----------
 st.header("🧱 Filter Your Data")
 
-rep_name = st.selectbox("Select your name (Grouped Customer Owner)", get_unique_options(df, "Grouped Customer Owner"))
-df_rep = df[df["Grouped Customer Owner"] == rep_name]
+rep_options = ["All"] + get_unique_options(df, "Grouped Customer Owner")
+rep_name = st.selectbox("Select your name (Grouped Customer Owner)", rep_options)
+
+if rep_name != "All":
+    df_rep = df[df["Grouped Customer Owner"] == rep_name]
+else:
+    df_rep = df.copy()
 
 col1, col2 = st.columns(2)
 with col1:
@@ -67,7 +74,9 @@ with col1:
 with col2:
     sku_name = st.selectbox("SKU Name", ["All"] + get_unique_options(df_rep, "SKU Name"))
 
-mask = (df["Grouped Customer Owner"] == rep_name)
+mask = pd.Series([True] * len(df))
+if rep_name != "All":
+    mask &= df["Grouped Customer Owner"] == rep_name
 if customer != "All":
     mask &= df["Grouped Customer"] == customer
 if sku_name != "All":
@@ -126,35 +135,30 @@ if "stored_forecast" in st.session_state:
 
     with kpi1:
         st.markdown(f"""
-        <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <h4 style="margin-bottom: 0.5rem; color: #333;">Total RF10</h4>
-            <p style="font-size: 1.8rem; font-weight: bold; color: #1f77b4;">{total_rf10:,}</p>
+        <div style="background-color: #f9f9f9; padding: 2rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h4 style="margin-bottom: 0.5rem; color: #333; font-size: 1.4rem;">Total RF10</h4>
+            <p style="font-size: 2rem; font-weight: bold; color: #1f77b4;">{total_rf10:,}</p>
         </div>
         """, unsafe_allow_html=True)
 
     with kpi2:
         st.markdown(f"""
-        <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <h4 style="margin-bottom: 0.5rem; color: #333;">Total Actual + Forecast</h4>
-            <p style="font-size: 1.8rem; font-weight: bold; color: #9467bd;">{total_actual_forecast:,}</p>
+        <div style="background-color: #f9f9f9; padding: 2rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h4 style="margin-bottom: 0.5rem; color: #333; font-size: 1.4rem;">Total Actual + Forecast</h4>
+            <p style="font-size: 2rem; font-weight: bold; color: #9467bd;">{total_actual_forecast:,}</p>
         </div>
         """, unsafe_allow_html=True)
 
     with kpi3:
         st.markdown(f"""
-        <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <h4 style="margin-bottom: 0.5rem; color: #333;">Total June Forecast</h4>
-            <p style="font-size: 1.8rem; font-weight: bold; color: #2ca02c;">{total_forecast:,} units</p>
+        <div style="background-color: #f9f9f9; padding: 2rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h4 style="margin-bottom: 0.5rem; color: #333; font-size: 1.4rem;">Total June Forecast</h4>
+            <p style="font-size: 2rem; font-weight: bold; color: #2ca02c;">{total_forecast:,} units</p>
         </div>
         """, unsafe_allow_html=True)
 
     # Reorder and clean up for bottom table
     table_df = draft_df[["Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"]].copy()
-
-    def color_cell(val):
-        if isinstance(val, int):
-            return val
-        return val
 
     colors = ["green" if v > 0 else "red" if v < 0 else "black" for v in table_df["Forecast Gap"]]
     formatted_gap = [f"<span style='color: {color}; font-weight: bold;'>{val}</span>" for val, color in zip(table_df["Forecast Gap"], colors)]
@@ -168,14 +172,14 @@ if "stored_forecast" in st.session_state:
             values=list(table_df.columns),
             fill_color='#003049',
             align='left',
-            font=dict(color='white', size=16)
+            font=dict(color='white', size=18)
         ),
         cells=dict(
             values=values,
             fill_color=[['#f6f6f6', '#ffffff'] * (len(table_df) // 2 + 1)][:len(table_df)],
             align='left',
-            font=dict(size=16),
-            height=28,
+            font=dict(size=18),
+            height=34,
             line_color='lightgrey'
         )
     )])
