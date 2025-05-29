@@ -148,21 +148,35 @@ if "stored_forecast" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
 
-    # Display polished table with Plotly
-    import plotly.graph_objects as go
-    
+    # Reorder and clean up for bottom table
+    table_df = draft_df[["Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"]].copy()
+
+    def format_forecast_gap(val):
+        color = "green" if val > 0 else "red" if val < 0 else "black"
+        return f"<span style='color: {color}; font-weight: bold;'>{val}</span>"
+
+    styled_cells = {
+        col: table_df[col] if col != "Forecast Gap" else [format_forecast_gap(v) for v in table_df[col]]
+        for col in table_df.columns
+    }
+
     fig = go.Figure(data=[go.Table(
         header=dict(
-            values=list(draft_df.columns),
+            values=list(table_df.columns),
             fill_color='#003049',
             align='left',
-            font=dict(color='white', size=12)
+            font=dict(color='white', size=14)
         ),
         cells=dict(
-            values=[draft_df[col] for col in draft_df.columns],
-            fill_color=[["#f6f6f6" if i % 2 == 0 else "#ffffff" for i in range(len(draft_df))]] * len(draft_df.columns),
+            values=list(styled_cells.values()),
+            fill_color=[["#f6f6f6" if i % 2 == 0 else "#ffffff" for i in range(len(table_df))]] * len(table_df.columns),
             align='left',
-            font=dict(size=12)
+            font=dict(size=14),
+            format=[""] * len(table_df.columns),
+            height=30,
+            line_color='lightgrey',
+            suffix=None,
+            unsafe_allow_html=True
         )
     )])
     fig.update_layout(margin=dict(l=0, r=0, t=10, b=0))
