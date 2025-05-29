@@ -137,7 +137,7 @@ if "stored_forecast" in st.session_state:
         st.markdown(f"""
         <div style="background-color: #f9f9f9; padding: 2rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <h4 style="margin-bottom: 0.5rem; color: #333; font-size: 1.4rem;">Total RF10</h4>
-            <p style="font-size: 2rem; font-weight: bold; color: #1f77b4;">{total_rf10:,}</p>
+            <p style="font-size: 2rem; font-weight: bold; color: #1f77b4;">{total_rf10:,} units</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -145,7 +145,7 @@ if "stored_forecast" in st.session_state:
         st.markdown(f"""
         <div style="background-color: #f9f9f9; padding: 2rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <h4 style="margin-bottom: 0.5rem; color: #333; font-size: 1.4rem;">Total Actual + Forecast</h4>
-            <p style="font-size: 2rem; font-weight: bold; color: #9467bd;">{total_actual_forecast:,}</p>
+            <p style="font-size: 2rem; font-weight: bold; color: #9467bd;">{total_actual_forecast:,} units</p>
         </div>
         """, unsafe_allow_html=True)
 
