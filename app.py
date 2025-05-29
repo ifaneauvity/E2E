@@ -74,6 +74,20 @@ with col1:
 with col2:
     sku_name = st.selectbox("SKU Name", ["All"] + get_unique_options(df_rep, "SKU Name"))
 
+# ----------- Optional Columns -----------
+optional_columns = [
+    "A24 Total", "A24 Total_9L", "A24 Total_Value",
+    "Contract_Vol_Q1", "Contract_Vol_Q2", "Contract_Vol_Q3", "Contract_Vol_Q4",
+    "Contract_Vol_Q1_9L", "Contract_Vol_Q2_9L", "Contract_Vol_Q3_9L", "Contract_Vol_Q4_9L",
+    "Contract_Vol_9L", "Contract_Value_Q1", "Contract_Value_Q2", "Contract_Value_Q3", "Contract_Value_Q4",
+    "RF10_9L", "RF10_Value"
+]
+
+selected_optional_columns = st.multiselect(
+    "📊 Select Additional Columns to Display",
+    optional_columns
+)
+
 mask = pd.Series(True, index=df.index)
 if rep_name != "All":
     mask &= df["Grouped Customer Owner"] == rep_name
@@ -90,20 +104,6 @@ for col in monthly_cols + ["Jun", "RF10"]:
     if col not in df_filtered.columns:
         df_filtered[col] = 0
     df_filtered[col] = pd.to_numeric(df_filtered[col], errors="coerce").fillna(0)
-
-# ----------- Optional Columns -----------
-optional_columns = [
-    "A24 Total", "A24 Total_9L", "A24 Total_Value",
-    "Contract_Vol_Q1", "Contract_Vol_Q2", "Contract_Vol_Q3", "Contract_Vol_Q4",
-    "Contract_Vol_Q1_9L", "Contract_Vol_Q2_9L", "Contract_Vol_Q3_9L", "Contract_Vol_Q4_9L",
-    "Contract_Vol_9L", "Contract_Value_Q1", "Contract_Value_Q2", "Contract_Value_Q3", "Contract_Value_Q4",
-    "RF10_9L", "RF10_Value"
-]
-
-selected_optional_columns = st.multiselect(
-    "📊 Select Additional Columns to Display",
-    optional_columns
-)
 
 # ----------- BUILD EDITOR TABLE -----------
 display_df = df_filtered[["Grouped Customer", "SKU Name", "Jun", "RF10"]].copy()
