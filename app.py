@@ -138,7 +138,7 @@ edited_df = st.data_editor(
 )
 
 # ----------- STORE DRAFT -----------
-if st.button("🗂️ Store Draft (Calculate Totals)"):
+if st.button("📂 Store Draft (Calculate Totals)"):
     st.session_state["stored_forecast"] = edited_df.copy()
 
 # ----------- BOTTOM TABLE AFTER CALCULATION -----------
@@ -182,12 +182,8 @@ if "stored_forecast" in st.session_state:
     # Reorder and clean up for bottom table
     table_df = draft_df[["Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"]].copy()
 
-    colors = ["green" if v > 0 else "red" if v < 0 else "black" for v in table_df["Forecast Gap"]]
-    formatted_gap = [f"<span style='color: {color}; font-weight: bold;'>{val}</span>" for val, color in zip(table_df["Forecast Gap"], colors)]
-    values = [
-        table_df[col].tolist() if col != "Forecast Gap" else formatted_gap
-        for col in table_df.columns
-    ]
+    gap_values = table_df["Forecast Gap"].tolist()
+    gap_colors = ["green" if v > 0 else "red" if v < 0 else "black" for v in gap_values]
 
     fig = go.Figure(data=[go.Table(
         header=dict(
@@ -197,10 +193,18 @@ if "stored_forecast" in st.session_state:
             font=dict(color='white', size=18)
         ),
         cells=dict(
-            values=values,
+            values=[
+                table_df["Grouped Customer"],
+                table_df["SKU Name"],
+                table_df["Jun"],
+                table_df["RF10"],
+                table_df["Actual + Forecast"],
+                gap_values
+            ],
             fill_color=[['#f6f6f6', '#ffffff'] * (len(table_df) // 2 + 1)][:len(table_df)],
             align='left',
             font=dict(size=18),
+            font_color=["black", "black", "black", "black", "black", gap_colors],
             height=34,
             line_color='lightgrey'
         )
