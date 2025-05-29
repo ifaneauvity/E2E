@@ -55,6 +55,11 @@ def get_unique_options(df, column):
 with st.spinner("Connecting to Databricks and loading data..."):
     df = load_forecast_from_databricks()
 
+# Add this right after loading
+if st.button("🔄 Refresh from Databricks"):
+    load_forecast_from_databricks.clear()
+    st.experimental_rerun()
+
 df.columns = df.columns.str.strip()
 
 # ----------- FILTERING UI -----------
