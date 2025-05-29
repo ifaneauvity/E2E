@@ -111,8 +111,8 @@ for col in selected_optional_columns:
     if col in df_filtered.columns:
         display_df[col] = df_filtered[col]
 
-main_columns = ["Grouped Customer", "SKU Name", "RF10", "Progress", "Jun"]
-final_columns = main_columns + selected_optional_columns
+main_columns = ["Grouped Customer", "SKU Name", "RF10", "Progress"]
+final_columns = main_columns + selected_optional_columns + ["Jun"]
 
 column_config = {
     "Grouped Customer": st.column_config.TextColumn(disabled=True),
