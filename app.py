@@ -145,6 +145,8 @@ if "stored_forecast" in st.session_state:
     styled_df = draft_df.style.applymap(color_gap, subset=["Forecast Gap"])
 
     total_forecast = draft_df["Jun"].sum()
+    total_rf10 = draft_df["RF10"].sum()
+    total_actual_forecast = draft_df["Actual + Forecast"].sum()
 
     draft_df = draft_df[[
         "Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"
@@ -159,6 +161,8 @@ if "stored_forecast" in st.session_state:
     st.markdown(
         f"""
         <div style="margin-top: 1rem; font-size: 1.2rem; font-weight: 600; color: #004080; text-align: right; padding-right: 2rem;">
+            📦 Total RF10: <span style="color:#0078D4;">{total_rf10:,.0f}</span> &nbsp;&nbsp;|
+            📈 Total Actual + Forecast: <span style="color:#6f42c1;">{total_actual_forecast:,.0f}</span> &nbsp;&nbsp;|
             🧱 Total June Forecast: <span style="color:#28a745;">{total_forecast:,.0f}</span> units
         </div>
         """,
