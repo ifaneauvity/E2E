@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from databricks import sql
 from io import BytesIO
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Sales Forecast Input Tool", layout="wide")
 
@@ -23,26 +24,6 @@ st.markdown("""
         border-radius: 8px;
         height: 3em;
         width: auto;
-    }
-    table {
-        border-collapse: collapse;
-        width: 100%;
-        font-family: Arial, sans-serif;
-    }
-    thead tr {
-        background-color: #003049;
-        color: white;
-    }
-    tbody tr:nth-child(odd) {
-        background-color: #f6f6f6;
-    }
-    tbody tr:nth-child(even) {
-        background-color: #ffffff;
-    }
-    td, th {
-        padding: 10px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -136,55 +117,57 @@ if "stored_forecast" in st.session_state:
     draft_df["Actual + Forecast"] = (draft_df["Progress"] + draft_df["Jun"]).astype(int)
     draft_df["Forecast Gap"] = (draft_df["Actual + Forecast"] - draft_df["RF10"]).astype(int)
 
-    def color_gap(val):
-        if pd.isna(val):
-            return ""
-        color = "#28a745" if val > 0 else "#dc3545" if val < 0 else "black"
-        return f"color: {color}"
-
-    styled_df = draft_df.style.applymap(color_gap, subset=["Forecast Gap"])
-
     total_forecast = draft_df["Jun"].sum()
     total_rf10 = draft_df["RF10"].sum()
     total_actual_forecast = draft_df["Actual + Forecast"].sum()
 
-    draft_df = draft_df[[
-        "Grouped Customer", "SKU Name", "RF10", "Progress", "Jun", "Actual + Forecast", "Forecast Gap"
-    ]]
-
-    st.dataframe(
-        styled_df.format(precision=0),
-        use_container_width=True,
-        hide_index=True
-    )
-
     # KPI cards display (styled like metric cards)
-kpi1, kpi2, kpi3 = st.columns(3)
+    kpi1, kpi2, kpi3 = st.columns(3)
 
-with kpi1:
-    st.markdown("""
-    <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-        <h4 style="margin-bottom: 0.5rem; color: #333;">Total RF10</h4>
-        <p style="font-size: 1.8rem; font-weight: bold; color: #1f77b4;">{:,}</p>
-    </div>
-    """.format(total_rf10), unsafe_allow_html=True)
+    with kpi1:
+        st.markdown(f"""
+        <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h4 style="margin-bottom: 0.5rem; color: #333;">Total RF10</h4>
+            <p style="font-size: 1.8rem; font-weight: bold; color: #1f77b4;">{total_rf10:,}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-with kpi2:
-    st.markdown("""
-    <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-        <h4 style="margin-bottom: 0.5rem; color: #333;">Total Actual + Forecast</h4>
-        <p style="font-size: 1.8rem; font-weight: bold; color: #9467bd;">{:,}</p>
-    </div>
-    """.format(total_actual_forecast), unsafe_allow_html=True)
+    with kpi2:
+        st.markdown(f"""
+        <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h4 style="margin-bottom: 0.5rem; color: #333;">Total Actual + Forecast</h4>
+            <p style="font-size: 1.8rem; font-weight: bold; color: #9467bd;">{total_actual_forecast:,}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-with kpi3:
-    st.markdown("""
-    <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-        <h4 style="margin-bottom: 0.5rem; color: #333;">Total June Forecast</h4>
-        <p style="font-size: 1.8rem; font-weight: bold; color: #2ca02c;">{:,} units</p>
-    </div>
-    """.format(total_forecast), unsafe_allow_html=True)
+    with kpi3:
+        st.markdown(f"""
+        <div style="background-color: #f9f9f9; padding: 1.5rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h4 style="margin-bottom: 0.5rem; color: #333;">Total June Forecast</h4>
+            <p style="font-size: 1.8rem; font-weight: bold; color: #2ca02c;">{total_forecast:,} units</p>
+        </div>
+        """, unsafe_allow_html=True)
 
+    # Display polished table with Plotly
+    import plotly.graph_objects as go
+    
+    fig = go.Figure(data=[go.Table(
+        header=dict(
+            values=list(draft_df.columns),
+            fill_color='#003049',
+            align='left',
+            font=dict(color='white', size=12)
+        ),
+        cells=dict(
+            values=[draft_df[col] for col in draft_df.columns],
+            fill_color=[["#f6f6f6" if i % 2 == 0 else "#ffffff" for i in range(len(draft_df))]] * len(draft_df.columns),
+            align='left',
+            font=dict(size=12)
+        )
+    )])
+    fig.update_layout(margin=dict(l=0, r=0, t=10, b=0))
+
+    st.plotly_chart(fig, use_container_width=True)
 
 # ----------- SUBMIT FORM -----------
 with st.form("forecast_form"):
