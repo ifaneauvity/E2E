@@ -148,9 +148,30 @@ if view == "🖍️ Rep Forecast Input":
         draft_df["Forecast Gap"] = (draft_df["Actual + Forecast"] - draft_df["RF10"]).astype(int)
 
         kpi1, kpi2, kpi3 = st.columns(3)
-        kpi1.metric("Total RF10", f"{draft_df['RF10'].sum():,} bottles")
-        kpi2.metric("Actual + Forecast", f"{draft_df['Actual + Forecast'].sum():,} bottles")
-        kpi3.metric("June Forecast", f"{draft_df['Jun'].sum():,} bottles")
+
+        with kpi1:
+            st.markdown(f"""
+            <div style="background-color: #f9f9f9; padding: 2rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h4 style="margin-bottom: 0.5rem; color: #333; font-size: 1.4rem;">Total RF10</h4>
+                <p style="font-size: 2rem; font-weight: bold; color: #1f77b4;">{draft_df['RF10'].sum():,} bottles</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with kpi2:
+            st.markdown(f"""
+            <div style="background-color: #f9f9f9; padding: 2rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h4 style="margin-bottom: 0.5rem; color: #333; font-size: 1.4rem;">Actual + Forecast</h4>
+                <p style="font-size: 2rem; font-weight: bold; color: #9467bd;">{draft_df['Actual + Forecast'].sum():,} bottles</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with kpi3:
+            st.markdown(f"""
+            <div style="background-color: #f9f9f9; padding: 2rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h4 style="margin-bottom: 0.5rem; color: #333; font-size: 1.4rem;">June Forecast</h4>
+                <p style="font-size: 2rem; font-weight: bold; color: #2ca02c;">{draft_df['Jun'].sum():,} bottles</p>
+            </div>
+            """, unsafe_allow_html=True)
 
         csv = draft_df.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Download Forecast as CSV", csv, "june_forecast.csv", "text/csv")
