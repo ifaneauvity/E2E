@@ -55,15 +55,10 @@ def get_unique_options(df, column):
 with st.spinner("Connecting to Databricks and loading data..."):
     df = load_forecast_from_databricks()
 
-# Add this right after loading
-if st.button("🔄 Refresh from Databricks"):
-    load_forecast_from_databricks.clear()
-    st.rerun()
-
 df.columns = df.columns.str.strip()
 
 # ----------- FILTERING UI -----------
-st.header("Filter Your Data")
+st.header("🧱 Filter Your Data")
 
 rep_options = ["All"] + get_unique_options(df, "Grouped Customer Owner")
 rep_name = st.selectbox("Select your name (Grouped Customer Owner)", rep_options)
@@ -116,34 +111,29 @@ for col in selected_optional_columns:
     if col in df_filtered.columns:
         display_df[col] = df_filtered[col]
 
-main_columns = ["Grouped Customer", "SKU Name", "RF10", "Progress"]
-final_columns = main_columns + selected_optional_columns + ["Jun"]
-
-column_config = {
-    "Grouped Customer": st.column_config.TextColumn(disabled=True),
-    "SKU Name": st.column_config.TextColumn(disabled=True),
-    "RF10": st.column_config.NumberColumn(disabled=True),
-    "Progress": st.column_config.NumberColumn(disabled=True),
-    "Jun": st.column_config.NumberColumn(
-        label="🔶 EDIT June Forecast",
-        help="You can modify this value. All other columns are locked.",
-        format="%d",
-        disabled=False
-    )
-}
-
-for col in selected_optional_columns:
-    column_config[col] = st.column_config.TextColumn(disabled=True)
+main_columns = ["Grouped Customer", "SKU Name", "RF10", "Progress", "Jun"]
+final_columns = main_columns + selected_optional_columns
 
 edited_df = st.data_editor(
     display_df[final_columns],
-    column_config=column_config,
+    column_config={
+        "Grouped Customer": st.column_config.TextColumn(disabled=True),
+        "SKU Name": st.column_config.TextColumn(disabled=True),
+        "RF10": st.column_config.NumberColumn(disabled=True),
+        "Progress": st.column_config.NumberColumn(disabled=True),
+        "Jun": st.column_config.NumberColumn(
+            label="✏️ June Forecast (Editable)",
+            help="Enter forecast values for June",
+            format="%d",
+            disabled=False
+        )
+    },
     use_container_width=True,
     key="editor_june"
 )
 
 # ----------- STORE DRAFT -----------
-if st.button("📂 Store Draft (Calculate Totals)"):
+if st.button("🗂️ Store Draft (Calculate Totals)"):
     st.session_state["stored_forecast"] = edited_df.copy()
 
 # ----------- BOTTOM TABLE AFTER CALCULATION -----------
@@ -187,8 +177,12 @@ if "stored_forecast" in st.session_state:
     # Reorder and clean up for bottom table
     table_df = draft_df[["Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"]].copy()
 
-    gap_values = table_df["Forecast Gap"].tolist()
-    gap_colors = ["green" if v > 0 else "red" if v < 0 else "black" for v in gap_values]
+    colors = ["green" if v > 0 else "red" if v < 0 else "black" for v in table_df["Forecast Gap"]]
+    formatted_gap = [f"<span style='color: {color}; font-weight: bold;'>{val}</span>" for val, color in zip(table_df["Forecast Gap"], colors)]
+    values = [
+        table_df[col].tolist() if col != "Forecast Gap" else formatted_gap
+        for col in table_df.columns
+    ]
 
     fig = go.Figure(data=[go.Table(
         header=dict(
@@ -198,18 +192,10 @@ if "stored_forecast" in st.session_state:
             font=dict(color='white', size=18)
         ),
         cells=dict(
-            values=[
-                table_df["Grouped Customer"],
-                table_df["SKU Name"],
-                table_df["Jun"],
-                table_df["RF10"],
-                table_df["Actual + Forecast"],
-                gap_values
-            ],
+            values=values,
             fill_color=[['#f6f6f6', '#ffffff'] * (len(table_df) // 2 + 1)][:len(table_df)],
             align='left',
             font=dict(size=18),
-            font_color=["black", "black", "black", "black", "black", gap_colors],
             height=34,
             line_color='lightgrey'
         )
