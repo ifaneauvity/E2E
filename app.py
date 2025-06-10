@@ -155,6 +155,36 @@ if view == "🖍️ Rep Forecast Input":
         csv = draft_df.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Download Forecast as CSV", csv, "june_forecast.csv", "text/csv")
 
+        # --- Show Forecast Summary Table ---
+        table_df = draft_df[["Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"]].copy()
+        colors = ["green" if v > 0 else "red" if v < 0 else "black" for v in table_df["Forecast Gap"]]
+        formatted_gap = [f"<span style='color: {color}; font-weight: bold;'>" + str(val) + "</span>" for val, color in zip(table_df["Forecast Gap"], colors)]
+
+        values = [
+            table_df[col].tolist() if col != "Forecast Gap" else formatted_gap
+            for col in table_df.columns
+        ]
+
+        fig = go.Figure(data=[go.Table(
+            header=dict(
+                values=list(table_df.columns),
+                fill_color='#003049',
+                align='left',
+                font=dict(color='white', size=18)
+            ),
+            cells=dict(
+                values=values,
+                fill_color=[['#f6f6f6', '#ffffff'] * (len(table_df) // 2 + 1)][:len(table_df)],
+                align='left',
+                font=dict(size=18),
+                height=34,
+                line_color='lightgrey'
+            )
+        )])
+        fig.update_layout(margin=dict(l=0, r=0, t=10, b=0))
+
+        st.plotly_chart(fig, use_container_width=True)
+
     with st.form("forecast_form"):
         submitted = st.form_submit_button("✅ Submit Forecast")
         if submitted:
