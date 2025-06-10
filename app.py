@@ -30,7 +30,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🖍️ Edit June Forecast")
+st.title("Edit June Forecast")
 
 # ----------- LOAD FROM DATABRICKS -----------
 @st.cache_data
@@ -58,7 +58,7 @@ with st.spinner("Connecting to Databricks and loading data..."):
 df.columns = df.columns.str.strip()
 
 # ----------- FILTERING UI -----------
-st.header("🧱 Filter Your Data")
+st.header("Filter Your Data")
 
 rep_options = ["All"] + get_unique_options(df, "Grouped Customer Owner")
 rep_name = st.selectbox("Select your name (Grouped Customer Owner)", rep_options)
@@ -136,7 +136,7 @@ edited_df = st.data_editor(
 if st.button("🗂️ Store Draft (Calculate Totals)"):
     st.session_state["stored_forecast"] = edited_df.copy()
 
-# ----------- BOTTOM TABLE AFTER CALCULATION -----------
+# ----------- BOTTOM TABLE + DOWNLOAD -----------
 if "stored_forecast" in st.session_state:
     draft_df = st.session_state["stored_forecast"].copy()
     draft_df["Progress"] = df_filtered[monthly_cols].sum(axis=1).astype(int)
@@ -147,7 +147,6 @@ if "stored_forecast" in st.session_state:
     total_rf10 = draft_df["RF10"].sum()
     total_actual_forecast = draft_df["Actual + Forecast"].sum()
 
-    # KPI cards display (styled like metric cards)
     kpi1, kpi2, kpi3 = st.columns(3)
 
     with kpi1:
@@ -174,11 +173,10 @@ if "stored_forecast" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
 
-    # Reorder and clean up for bottom table
     table_df = draft_df[["Grouped Customer", "SKU Name", "Jun", "RF10", "Actual + Forecast", "Forecast Gap"]].copy()
-
     colors = ["green" if v > 0 else "red" if v < 0 else "black" for v in table_df["Forecast Gap"]]
     formatted_gap = [f"<span style='color: {color}; font-weight: bold;'>{val}</span>" for val, color in zip(table_df["Forecast Gap"], colors)]
+
     values = [
         table_df[col].tolist() if col != "Forecast Gap" else formatted_gap
         for col in table_df.columns
@@ -201,9 +199,19 @@ if "stored_forecast" in st.session_state:
         )
     )])
     fig.update_layout(margin=dict(l=0, r=0, t=10, b=0))
-
     st.plotly_chart(fig, use_container_width=True)
+
+    # Download button
+    csv = draft_df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download Forecast as CSV", csv, "june_forecast.csv", "text/csv")
 
 # ----------- SUBMIT FORM -----------
 with st.form("forecast_form"):
     submitted = st.form_submit_button("✅ Submit Forecast")
+    if submitted:
+        if "stored_forecast" not in st.session_state:
+            st.error("⚠️ Please click 'Store Draft' before submitting your forecast.")
+        elif (st.session_state["stored_forecast"]["Jun"] < 0).any():
+            st.error("🚫 Submission failed: June forecast cannot contain negative values.")
+        else:
+            st.success("✅ Forecast submitted successfully!")
